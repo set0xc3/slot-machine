@@ -32,8 +32,6 @@ public:
   Shader *shader_load(const std::string vs_path, const std::string fs_path);
   void shader_mat4_set(const Shader *shader, const std::string name, const glm::mat4 matrix);
 
-  Texture *texture_load(const std::string path);
-
 private:
   Shader *base_shader;
 

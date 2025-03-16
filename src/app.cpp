@@ -14,16 +14,21 @@ void App::init()
 
 void App::run()
 {
-    Uint64 prev_time = SDL_GetPerformanceCounter();
-    Uint64 freq = SDL_GetPerformanceFrequency();
-    float dt = 0.0f;
+    const double fps_max = 60.0;
+    const double period_max = 1.0 / fps_max;
+    const double perf_frequency = (double)SDL_GetPerformanceFrequency();
+
+    double time = 0.0;
+    double begin_counter = 0.0;
+    double end_counter = 0.0;
 
     while (is_running)
     {
-        Uint64 curr_time = SDL_GetPerformanceCounter();
-        dt = (float)(curr_time - prev_time) / freq;
-        // std::cout << "Delta Time: " << dt << "s, FPS: " << 1.0f / dt << std::endl;
-        prev_time = curr_time;
+        begin_counter = (double)SDL_GetPerformanceCounter();
+
+        double counter_elapsed = (double)(begin_counter - end_counter);
+        double dt = (double)(counter_elapsed / perf_frequency);
+        double fps = (double)(perf_frequency / counter_elapsed);
 
         // Event
         //
@@ -32,25 +37,39 @@ void App::run()
             is_running = false;
         }
 
-        // Update
-        //
-        Game::get_instance().update((float)dt);
+        if (dt >= period_max)
+        {
+            // Ограничиваем dt, чтобы избежать скачков
+            if (dt >= 1.0)
+            {
+                dt = period_max;
+            }
 
-        // Renderer
-        //
-        GFX::get_instance().begin();
-        GFX::get_instance().draw();
-        GFX::get_instance().end();
+            // Update
+            //
+            Game::get_instance().update((float)dt);
 
-        Window::get_instance().swapchain();
+            // Renderer
+            //
+            GFX::get_instance().begin();
+            GFX::get_instance().draw();
+            GFX::get_instance().end();
 
-        SDL_Delay(1);
+            Window::get_instance().swapchain();
+
+            end_counter = begin_counter;
+            time += dt;
+
+            std::cout << "Delta Time: " << dt << "s, FPS: " << fps << std::endl;
+        }
+
+        double sleep_time_ms = period_max;
+        SDL_Delay((Uint32)sleep_time_ms * 1000);
     }
 }
 
 void App::deinit()
 {
-    Game::get_instance().deinit();
     GFX::get_instance().deinit();
     Window::get_instance().deinit();
 }

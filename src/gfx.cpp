@@ -38,48 +38,66 @@ void GFX::begin()
 
 void GFX::draw()
 {
-    auto frame = Game::get_instance().get_frame();
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(
-        (GLint)frame->position.x,
-        (GLint)(frame->position.y),
-        (GLsizei)frame->size.x,
-        (GLsizei)frame->size.y);
+    glm::vec2 window_size = Window::get_instance().get_size();
+    glm::mat4 projection = glm::ortho(
+        0.0f, window_size.x,
+        0.0f, window_size.y,
+        -1.0f, 1.0f);
+    glUseProgram(base_shader->id);
+    shader_mat4_set(base_shader, "u_projection", projection);
 
     for (Entity *entity : Game::get_instance().get_entities())
     {
+        if (entity->is_scissor)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, glm::vec3(entity->position, 0.0f));
+            model = glm::scale(model, glm::vec3(entity->size, 1.0f));
+            shader_mat4_set(base_shader, "u_model", model);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, entity->texture.lock()->get_id());
+            glBindVertexArray(entity->mesh->get_id());
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(
+                (GLint)entity->position.x,
+                (GLint)entity->position.y,
+                (GLsizei)entity->size.x,
+                (GLsizei)entity->size.y);
+
+            for (Entity *child : entity->childs)
+            {
+                model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(child->position, 0.0f));
+                model = glm::scale(model, glm::vec3(child->size, 1.0f));
+                shader_mat4_set(base_shader, "u_model", model);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, child->texture.lock()->get_id());
+                glBindVertexArray(child->mesh->get_id());
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            }
+            glDisable(GL_SCISSOR_TEST);
+        }
+    }
+
+    for (Entity *entity : Game::get_instance().get_entities())
+    {
+        if (entity->is_scissor || entity->root != nullptr)
+            continue;
+
         glm::mat4 model = glm::mat4(1.0f);
-        glm::vec2 window_size = Window::get_instance().get_size();
-        glm::mat4 projection = glm::ortho(
-            0.0f, window_size.x,
-            0.0f, window_size.y,
-            -1.0f, 1.0f);
-        glUseProgram(base_shader->id);
-        shader_mat4_set(base_shader, "u_projection", projection);
-
-        // Debug outline
-        model = glm::translate(model, glm::vec3(entity->position, 0.0f));
-        model = glm::scale(model, glm::vec3(entity->size.x + 1.0f, entity->size.y + 1.0f, 1.0f));
-        shader_mat4_set(base_shader, "u_model", model);
-        glBindVertexArray(entity->mesh->vao);
-        glDrawElements(GL_LINE_LOOP, 6, GL_UNSIGNED_INT, 0);
-
-        model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(entity->position, 0.0f));
         model = glm::scale(model, glm::vec3(entity->size, 1.0f));
         shader_mat4_set(base_shader, "u_model", model);
-
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, entity->texture->id);
-
-        glBindVertexArray(entity->mesh->vao);
+        glBindTexture(GL_TEXTURE_2D, entity->texture.lock()->get_id());
+        glBindVertexArray(entity->mesh->get_id());
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindVertexArray(0);
     }
 
-    glDisable(GL_SCISSOR_TEST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindVertexArray(0);
 }
 
 void GFX::end()
@@ -174,39 +192,4 @@ Shader *GFX::shader_load(const std::string vs_path, const std::string fs_path)
 void GFX::shader_mat4_set(const Shader *shader, const std::string name, const glm::mat4 matrix)
 {
     glUniformMatrix4fv(glGetUniformLocation(shader->id, name.c_str()), 1, GL_FALSE, glm::value_ptr(matrix));
-}
-
-Texture *GFX::texture_load(const std::string path)
-{
-    auto *result = new (Texture);
-    auto *surface = IMG_Load(path.c_str());
-
-    GLuint id;
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id);
-
-    GLenum format = (surface->format->BytesPerPixel == 4) ? GL_RGBA : GL_RGB;
-
-    glTexImage2D(
-        GL_TEXTURE_2D, 0, format,
-        surface->w, surface->h, 0,
-        format, GL_UNSIGNED_BYTE, surface->pixels);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height;
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    SDL_FreeSurface(surface);
-
-    result->id = id;
-    result->size.x = (float)width;
-    result->size.y = (float)height;
-    return result;
 }

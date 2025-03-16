@@ -3,8 +3,17 @@
 
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "entity.hpp"
+
+enum GameState
+{
+    Idle,
+    Spinning,
+    Stopping,
+    Win
+};
 
 class Game
 {
@@ -21,18 +30,20 @@ public:
 
     void init();
     void update(float dt);
-    void deinit();
 
-    Entity *get_frame() const;
     std::vector<Entity *> get_entities() const;
 
 private:
-    Entity *frame;
-    std::vector<Entity *> entities;
-
-    std::map<std::string, Texture *> textures;
-
     Game() {}
+
+    Entity *frame;
+    std::vector<std::vector<Entity *>> columns;
+    std::vector<Entity *> entities;
+    std::vector<float> column_offsets;
+
+    GameState curr_state = GameState::Idle;
+
+    std::map<std::string, std::shared_ptr<Texture>> textures;
 };
 
 #endif

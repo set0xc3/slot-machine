@@ -3,7 +3,7 @@
 #include <vector>
 #include <glad/glad.h>
 
-void Mesh::create()
+Mesh::Mesh()
 {
     const std::vector<float> vertices = {
         // x, y,    u, v
@@ -39,9 +39,13 @@ void Mesh::create()
     glBindVertexArray(0);
 }
 
-void Mesh::destroy()
+Mesh::~Mesh()
 {
     glDeleteVertexArrays(1, &vao);
     glDeleteBuffers(1, &vbo);
     glDeleteBuffers(1, &ebo);
+}
+
+const uint32_t Mesh::get_id() {
+    return vao;
 }

@@ -6,10 +6,12 @@
 class Mesh
 {
 public:
-    void create();
-    void destroy();
+    Mesh();
+    ~Mesh();
 
-public:
+    const uint32_t get_id();
+
+private:
     uint32_t vao = 0;
     uint32_t vbo = 0;
     uint32_t ebo = 0;
