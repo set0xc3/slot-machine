@@ -83,16 +83,16 @@ void Window::deinit()
     SDL_Quit();
 }
 
-glm::vec2 Window::get_position()
+const glm::vec2 Window::get_position() const
 {
     return position;
 }
-glm::vec2 Window::get_size()
+const glm::vec2 Window::get_size() const
 {
     return size;
 }
 
-glm::vec2 Window::get_mouse_position()
+const glm::vec2 Window::get_mouse_position() const
 {
     return mouse_position;
 }

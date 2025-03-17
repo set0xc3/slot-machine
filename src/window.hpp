@@ -22,9 +22,9 @@ public:
     void swapchain();
     void deinit();
 
-    glm::vec2 get_position();
-    glm::vec2 get_size();
-    glm::vec2 get_mouse_position();
+    const glm::vec2 get_position() const;
+    const glm::vec2 get_size() const;
+    const glm::vec2 get_mouse_position() const;
 
 private:
     glm::vec2 position;
